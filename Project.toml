@@ -1,0 +1,13 @@
+name = "PerfusionImaging"
+uuid = "187119c3-f0c9-4846-bd2a-6fdb8a2d7639"
+authors = ["Dale Black <djblack@uci.edu> and contributors"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
