@@ -3,6 +3,12 @@ uuid = "187119c3-f0c9-4846-bd2a-6fdb8a2d7639"
 authors = ["Dale Black <djblack@uci.edu> and contributors"]
 version = "1.0.0-DEV"
 
+[deps]
+CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
+DICOM = "a26e6606-dd52-5f6a-a97f-4f611373d757"
+LsqFit = "2fda8390-95c7-5789-9bda-21331edee243"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+
 [compat]
 julia = "1"
 
