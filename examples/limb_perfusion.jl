@@ -488,9 +488,17 @@ md"""
 ## Extract SureStart Times
 """
 
+# ╔═╡ e385d115-47e4-4a59-a6d0-6ea95455e901
+md"""
+## Gamma Variate
+"""
+
+# ╔═╡ 442acfeb-981d-4ff1-9b3f-93709cdb428b
+@bind offset PlutoUI.Slider(0:0.5:10, show_value = true, default = 5)
+
 # ╔═╡ 61604f83-e5f3-4aed-ac0b-1c630d7a1d67
 if aif1_ready && aif2_ready
-	time_vector_ss = scan_time_vector(dcms_ss)
+	time_vector_ss = scan_time_vector(dcms_ss) .+ offset
 	time_vector_ss_rel = time_vector_ss .- time_vector_ss[1]
 
 	time_vector_v2 = scan_time_vector(dcms_v2)
@@ -500,11 +508,6 @@ if aif1_ready && aif2_ready
 
 	time_vec_gamma = [time_vector_ss_rel..., delta_time + time_vector_ss_rel[end]]
 end
-
-# ╔═╡ e385d115-47e4-4a59-a6d0-6ea95455e901
-md"""
-## Gamma Variate
-"""
 
 # ╔═╡ e87721fa-5731-4a3e-bd8d-a17dc8fdeffc
 if aif1_ready && aif2_ready
@@ -658,6 +661,9 @@ if aif1_ready && aif2_ready
 	df = DataFrame(parameters = col_names, values = col_vals)
 end
 
+# ╔═╡ 4fc6b337-468a-445a-9180-4a89ff4ee24c
+df
+
 # ╔═╡ Cell order:
 # ╠═eeba971b-c64e-4195-95ca-5cf2ae5ac590
 # ╠═0129d839-fde4-46bf-a2e1-beb79fdd2cab
@@ -729,7 +735,9 @@ end
 # ╟─e385d115-47e4-4a59-a6d0-6ea95455e901
 # ╠═e87721fa-5731-4a3e-bd8d-a17dc8fdeffc
 # ╠═fc43feee-9d9a-4af6-a76a-7dfbb927c0ae
+# ╟─442acfeb-981d-4ff1-9b3f-93709cdb428b
 # ╟─c44b2487-bcd2-43f2-af89-2e3b0e1a54e8
+# ╠═4fc6b337-468a-445a-9180-4a89ff4ee24c
 # ╟─5aecb6b9-a813-4cf8-8a7f-2da4a19a052e
 # ╟─d90057db-c68d-4b70-9247-1098bf129783
 # ╠═140c1343-2a6e-4d4f-a3db-0d608d7e885c
