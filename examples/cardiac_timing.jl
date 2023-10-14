@@ -438,6 +438,12 @@ if aif1_ready
 	end
 end
 
+# ╔═╡ 66139d6e-efb4-4cdf-8877-64e28c134816
+df = DataFrame(
+	"Patient ID" => basename(root_path),
+	"TTP (s)" => time_to_peak
+)
+
 # ╔═╡ Cell order:
 # ╠═fbd1393c-8d72-4d95-b4d7-23e59a014368
 # ╠═9ce12616-27aa-4161-bce0-599935ee6e9b
@@ -488,3 +494,4 @@ end
 # ╠═b26e32e3-2b26-4a11-8934-37e69bb2c17d
 # ╠═68542331-685c-49ea-9ca8-c5525181b284
 # ╟─b3e896e4-7fa3-44fd-8198-83dde7fed508
+# ╠═66139d6e-efb4-4cdf-8877-64e28c134816
