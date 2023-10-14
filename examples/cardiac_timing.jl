@@ -31,6 +31,13 @@ begin
 	using PerfusionImaging
 end
 
+# ╔═╡ 24e7db28-507b-46ee-8bd6-e4bda794d4f3
+# ╠═╡ show_logs = false
+begin
+	Pkg.add("Dierckx")
+	using Dierckx
+end
+
 # ╔═╡ 9ce12616-27aa-4161-bce0-599935ee6e9b
 TableOfContents()
 
@@ -366,36 +373,66 @@ if aif1_ready
 	end
 end
 
+# ╔═╡ a20eee68-1d51-4692-8e07-c2c9a707138b
+md"""
+## Time to Peak
+"""
+
+# ╔═╡ 4b58580f-27c1-4542-9687-709d2f5b56ed
+# Fit a spline to the data
+spline = Spline1D(x_fit, y_fit, k=5, s=0)
+
+# ╔═╡ 15edff0e-08c3-4f2e-a1dc-a9d4f1dd49b6
+# Compute the second derivative
+second_derivative = derivative(spline, x_fit, 2)
+
+# ╔═╡ 2634df11-5f10-4c62-931c-4ad4d3117e7e
+begin
+	# Find the x value of maximum upward concavity
+	max_upward_concavity_idx = argmax(second_derivative)
+	max_upward_concavity_x = x_fit[max_upward_concavity_idx]
+end
+
+# ╔═╡ b26e32e3-2b26-4a11-8934-37e69bb2c17d
+begin
+	# Find the nearest data point to this x value
+	trigger_idx = findmin(abs.(time_vec_gamma .- max_upward_concavity_x))[2]
+	trigger_time = Int.(time_vec_gamma[trigger_idx])
+end
+
+# ╔═╡ 68542331-685c-49ea-9ca8-c5525181b284
+time_to_peak = time_vector_ss_rel[peak_idx] - trigger_time
+
 # ╔═╡ b3e896e4-7fa3-44fd-8198-83dde7fed508
 if aif1_ready
 	let
 		f = Figure()
 		ax = Axis(
 			f[1, 1],
-			xlabel = "Time Point",
+			xlabel = "Time Point (s)",
 			ylabel = "Intensity (HU)",
 			title = "Fitted AIF Curve"
 		)
 		
 		scatter!(time_vec_gamma, aif_vec_gamma, label="Data Points")
 		lines!(x_fit, y_fit, label="Fitted Curve", color = :red)
-		# scatter!(time_vec_gamma[end-1], aif_vec_gamma[end-1], label = "Trigger")
-		# scatter!(time_vec_gamma[end], aif_vec_gamma[end], label = "V2")
+		scatter!(time_vec_gamma[trigger_idx], aif_vec_gamma[trigger_idx], label = "Trigger")
+		scatter!(time_vec_gamma[peak_idx], aif_vec_gamma[peak_idx], label = "Peak")
 		
 		axislegend(ax, position=:lt)
 	
-		# Create the AUC plot
-		time_temp = range(time_vec_gamma[3], stop=time_vec_gamma[end], length=round(Int, maximum(time_vec_gamma) * 1))
-		auc_area = gamma(time_temp, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
+		# # Create the AUC plot
+		# time_temp = range(time_vec_gamma[3], stop=time_vec_gamma[end], length=round(Int, maximum(time_vec_gamma) * 1))
+		# auc_area = gamma(time_temp, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
 		
-		# Create a denser AUC plot
-		n_points = 1000  # Number of points for denser interpolation
-		time_temp_dense = range(time_temp[1], stop=time_temp[end], length=n_points)
-		auc_area_dense = gamma(time_temp_dense, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
+		# # Create a denser AUC plot
+		# n_points = 1000  # Number of points for denser interpolation
+		# time_temp_dense = range(time_temp[1], stop=time_temp[end], length=n_points)
+		# auc_area_dense = gamma(time_temp_dense, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
 	
-		for i = 1:length(auc_area_dense)
-		    lines!(ax, [time_temp_dense[i], time_temp_dense[i]], [baseline_hu, auc_area_dense[i] + baseline_hu], color=:cyan, linewidth=1, alpha=0.2)
-		end
+		# for i = 1:length(auc_area_dense)
+		#     lines!(ax, [time_temp_dense[i], time_temp_dense[i]], [baseline_hu, auc_area_dense[i] + baseline_hu], color=:cyan, linewidth=1, alpha=0.2)
+		# end
 	
 		f
 	end
@@ -443,4 +480,11 @@ end
 # ╟─45578dd1-efa2-465d-ab8a-f25fbf5ddd7c
 # ╠═21d1ae53-6ca0-47b3-9c8d-f6846fbdc10e
 # ╠═f4071716-14fc-4a81-9b5a-8664ca6ad5f7
+# ╟─a20eee68-1d51-4692-8e07-c2c9a707138b
+# ╠═24e7db28-507b-46ee-8bd6-e4bda794d4f3
+# ╠═4b58580f-27c1-4542-9687-709d2f5b56ed
+# ╠═15edff0e-08c3-4f2e-a1dc-a9d4f1dd49b6
+# ╠═2634df11-5f10-4c62-931c-4ad4d3117e7e
+# ╠═b26e32e3-2b26-4a11-8934-37e69bb2c17d
+# ╠═68542331-685c-49ea-9ca8-c5525181b284
 # ╟─b3e896e4-7fa3-44fd-8198-83dde7fed508
