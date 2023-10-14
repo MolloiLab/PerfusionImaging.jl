@@ -1,4 +1,4 @@
-using LsqFit
+using LsqFit: curve_fit
 
 function gamma(x, p, time_vec_end, aif_vec_end)
     p1, p2 = p
