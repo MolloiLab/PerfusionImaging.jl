@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.26
+# v0.19.29
 
 using Markdown
 using InteractiveUtils
@@ -25,9 +25,10 @@ begin
     Pkg.add("ImageMorphology")
     Pkg.add("Statistics")
     Pkg.add("DataFrames")
+	Pkg.add("CSV")
 	Pkg.add(url = "https://github.com/Dale-Black/PerfusionImaging.jl")
 
-    using DICOM, CairoMakie, PlutoUI, ImageMorphology, Statistics, DataFrames
+    using DICOM, CairoMakie, PlutoUI, ImageMorphology, Statistics, CSV, DataFrames
 	using PerfusionImaging
 end
 
@@ -57,7 +58,7 @@ md"""
 
 Provide the path to the main folder containing the raw DICOM files and segmentations. Then click submit.
 
-$(@bind root_path confirm(PlutoUI.TextField(60; default = "/Users/daleblack/Library/CloudStorage/GoogleDrive-djblack@uci.edu/My Drive/Datasets/perfusion/CTP030")))
+$(@bind root_path confirm(PlutoUI.TextField(60; default = raw"Z:\Patient_UT\CTP001")))
 """
 
 # ╔═╡ fb0efec0-8345-4e89-a551-8b5cb13366c1
@@ -393,56 +394,60 @@ begin
 	max_upward_concavity_x = x_fit[max_upward_concavity_idx]
 end
 
-# ╔═╡ b26e32e3-2b26-4a11-8934-37e69bb2c17d
+# ╔═╡ 9d27b15d-7d64-40b0-9920-dbfaf7a26471
 begin
-	# Find the nearest data point to this x value
-	trigger_idx = findmin(abs.(time_vec_gamma .- max_upward_concavity_x))[2]
-	trigger_time = Int.(time_vec_gamma[trigger_idx])
+    # Find the nearest data point to this x value
+    trigger_idx = findmin(abs.(time_vec_gamma .- max_upward_concavity_x))[2]
+    trigger_time = Int(round(time_vec_gamma[trigger_idx]))
 end
 
-# ╔═╡ 68542331-685c-49ea-9ca8-c5525181b284
+# ╔═╡ 81bb4411-782f-41aa-836c-800a2c7244c8
 time_to_peak = time_vector_ss_rel[peak_idx] - trigger_time
 
-# ╔═╡ b3e896e4-7fa3-44fd-8198-83dde7fed508
+# ╔═╡ ce9eaf15-954c-4993-b187-00fcce1a29aa
 if aif1_ready
-	let
-		f = Figure()
-		ax = Axis(
-			f[1, 1],
-			xlabel = "Time Point (s)",
-			ylabel = "Intensity (HU)",
-			title = "Fitted AIF Curve"
-		)
-		
-		scatter!(time_vec_gamma, aif_vec_gamma, label="Data Points")
-		lines!(x_fit, y_fit, label="Fitted Curve", color = :red)
-		scatter!(time_vec_gamma[trigger_idx], aif_vec_gamma[trigger_idx], label = "Trigger")
-		scatter!(time_vec_gamma[peak_idx], aif_vec_gamma[peak_idx], label = "Peak")
-		
-		axislegend(ax, position=:lt)
-	
-		# # Create the AUC plot
-		# time_temp = range(time_vec_gamma[3], stop=time_vec_gamma[end], length=round(Int, maximum(time_vec_gamma) * 1))
-		# auc_area = gamma(time_temp, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
-		
-		# # Create a denser AUC plot
-		# n_points = 1000  # Number of points for denser interpolation
-		# time_temp_dense = range(time_temp[1], stop=time_temp[end], length=n_points)
-		# auc_area_dense = gamma(time_temp_dense, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
-	
-		# for i = 1:length(auc_area_dense)
-		#     lines!(ax, [time_temp_dense[i], time_temp_dense[i]], [baseline_hu, auc_area_dense[i] + baseline_hu], color=:cyan, linewidth=1, alpha=0.2)
-		# end
-	
-		f
-	end
+    let
+        f = Figure()
+        ax = Axis(
+            f[1, 1],
+            xlabel = "Time Point (s)",
+            ylabel = "Intensity (HU)",
+            title = "Fitted AIF Curve ($(basename(root_path)))"
+        )
+
+        scatter!(time_vec_gamma, aif_vec_gamma, label="Data Points")
+        lines!(x_fit, y_fit, label="Fitted Curve", color = :red)
+        scatter!(time_vec_gamma[trigger_idx], aif_vec_gamma[trigger_idx], label = "Trigger")
+        scatter!(time_vec_gamma[peak_idx], aif_vec_gamma[peak_idx], label = "Peak")
+
+        axislegend(ax, position=:lt)
+
+        # # Create the AUC plot
+        # time_temp = range(time_vec_gamma[3], stop=time_vec_gamma[end], length=round(Int, maximum(time_vec_gamma) * 1))
+        # auc_area = gamma(time_temp, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
+
+        # # Create a denser AUC plot
+        # n_points = 1000  # Number of points for denser interpolation
+        # time_temp_dense = range(time_temp[1], stop=time_temp[end], length=n_points)
+        # auc_area_dense = gamma(time_temp_dense, opt_params, time_vec_end, aif_vec_end) .- baseline_hu
+
+        # for i = 1:length(auc_area_dense)
+        #     lines!(ax, [time_temp_dense[i], time_temp_dense[i]], [baseline_hu, auc_area_dense[i] + baseline_hu], color=:cyan, linewidth=1, alpha=0.2)
+        # end
+        save(joinpath(dirname(root_path), "output", "$(basename(root_path)).png"), f)
+
+        f
+    end
 end
 
-# ╔═╡ 66139d6e-efb4-4cdf-8877-64e28c134816
+# ╔═╡ ac190a28-bdca-4f7b-b071-ee7ef22509ed
 df = DataFrame(
-	"Patient ID" => basename(root_path),
-	"TTP (s)" => time_to_peak
+    "Patient ID" => basename(root_path),
+    "TTP (s)" => time_to_peak
 )
+
+# ╔═╡ 103209b1-4b7a-48ee-91d0-fc7d929489e7
+CSV.write(joinpath(dirname(root_path), "output", "$(basename(root_path)).csv"), df)
 
 # ╔═╡ Cell order:
 # ╠═fbd1393c-8d72-4d95-b4d7-23e59a014368
@@ -491,7 +496,8 @@ df = DataFrame(
 # ╠═4b58580f-27c1-4542-9687-709d2f5b56ed
 # ╠═15edff0e-08c3-4f2e-a1dc-a9d4f1dd49b6
 # ╠═2634df11-5f10-4c62-931c-4ad4d3117e7e
-# ╠═b26e32e3-2b26-4a11-8934-37e69bb2c17d
-# ╠═68542331-685c-49ea-9ca8-c5525181b284
-# ╟─b3e896e4-7fa3-44fd-8198-83dde7fed508
-# ╠═66139d6e-efb4-4cdf-8877-64e28c134816
+# ╠═9d27b15d-7d64-40b0-9920-dbfaf7a26471
+# ╠═81bb4411-782f-41aa-836c-800a2c7244c8
+# ╟─ce9eaf15-954c-4993-b187-00fcce1a29aa
+# ╠═ac190a28-bdca-4f7b-b071-ee7ef22509ed
+# ╠═103209b1-4b7a-48ee-91d0-fc7d929489e7
