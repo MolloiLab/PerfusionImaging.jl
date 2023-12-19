@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.26
+# v0.19.35
 
 using Markdown
 using InteractiveUtils
@@ -14,9 +14,38 @@ macro bind(def, element)
     end
 end
 
-# ╔═╡ eeba971b-c64e-4195-95ca-5cf2ae5ac590
+# ╔═╡ fac7bdb8-7413-465b-bceb-9d9bb73c9117
 # ╠═╡ show_logs = false
-begin
+using Pkg; Pkg.activate("."); Pkg.instantiate()
+
+# ╔═╡ a33b073a-6e34-426e-b43a-d82350e6444f
+using PlutoUI: TableOfContents, bind, TextField, Slider, confirm, combine, CheckBox
+
+# ╔═╡ ed34c08a-85db-471e-919a-0ae52eabbc0b
+using CairoMakie: Figure, Axis, heatmap, heatmap!, lines!, scatter!, axislegend, Colorbar
+
+# ╔═╡ 531b84e9-5d9c-4864-9bd1-d2ef3597f579
+using DICOM: dcmdir_parse
+
+# ╔═╡ 7d5a2b33-bd9f-4e8e-a13d-0fc0ef51eebf
+using ImageMorphology: erode
+
+# ╔═╡ f3244e67-9793-4d04-b49d-d8195c22f15f
+using Statistics: mean, std
+
+# ╔═╡ 6f7fb2d3-5931-496c-88d6-3a9e166480fe
+using DataFrames: DataFrame
+
+# ╔═╡ 318e2ea3-6995-426d-aa3b-14d4db8a9e7e
+# ╠═╡ show_logs = false
+using PerfusionImaging: load_dcm_array, find_bounding_box, crop_array, register, compute_aif, scan_time_vector, gamma_curve_fit, gamma, trapz, get_voxel_size
+
+# ╔═╡ a18a15fe-e253-4743-96ce-6b63f24b6b3b
+md"""
+!!! info "Installing packages"
+	If you aren't in a proper Julia environment with all of the below packages already installed you will need to add each package before importing it. If you plan on using this notebook over and over again, then set up a [proper environment](https://modernjuliaworkflows.github.io/pages/writing/writing/#:~:text=julia%3E%20Pluto.run()-,Environments,-TLDR%3A%20Julia%20environments). If you are only using this once, then you can make a temporary environment with the steps below:
+
+	```julia
     using Pkg; Pkg.activate(; temp = true)
 
     Pkg.add("DICOM")
@@ -26,10 +55,11 @@ begin
     Pkg.add("Statistics")
     Pkg.add("DataFrames")
 	Pkg.add(url = "https://github.com/Dale-Black/PerfusionImaging.jl")
+	```
+"""
 
-    using DICOM, CairoMakie, PlutoUI, ImageMorphology, Statistics, DataFrames
-	using PerfusionImaging
-end
+# ╔═╡ 1e7e5a47-bcbe-4693-bf54-56f560ccc3cc
+import GLMakie
 
 # ╔═╡ 0129d839-fde4-46bf-a2e1-beb79fdd2cab
 TableOfContents()
@@ -50,7 +80,7 @@ md"""
 
 Provide the path to the main folder containing the raw DICOM files and segmentations. Then click submit.
 
-$(@bind root_path confirm(PlutoUI.TextField(60; default = "/Users/daleblack/Library/CloudStorage/GoogleDrive-djblack@uci.edu/My Drive/Datasets/perfusion/limb")))
+$(@bind root_path confirm(TextField(60; default = raw"\\160.87.12.113\Molloilab\Alireza\limb\Limb_NEW_Project\4-12-23\Flow 170")))
 """
 
 # ╔═╡ a830eebb-faf8-492b-ac42-2109e5173482
@@ -61,17 +91,17 @@ md"""
 # ╔═╡ 87284291-da14-4a86-8af1-2dcd8d845eee
 function volume_paths(dcm, v1, v2)
 	
-	return PlutoUI.combine() do Child
+	return combine() do Child
 		
 		inputs = [
 			md""" $(dcm): $(
-				Child(PlutoUI.TextField(60; default = "DICOM"))
+				Child(TextField(60; default = "DICOM"))
 			)""",
 			md""" $(v1): $(
-				Child(PlutoUI.TextField(60; default = "01"))
+				Child(TextField(60; default = "01"))
 			)""",
 			md""" $(v2): $(
-				Child(PlutoUI.TextField(60; default = "02"))
+				Child(TextField(60; default = "02"))
 			)"""
 		]
 		
@@ -117,7 +147,7 @@ md"""
 
 Input the name of the folder containing the SureStart scans (default is `SureStart`). Then click submit
 
-$(@bind surestart_folder confirm(PlutoUI.TextField(60; default = "SureStart")))
+$(@bind surestart_folder confirm(TextField(60; default = "SureStart")))
 """
 
 # ╔═╡ 7f54d3c0-945e-4bc3-b2de-f37d93208963
@@ -137,7 +167,7 @@ md"""
 
 Input the name of the folder containing the segmentation(s) (default is `SEGMENT_dcm`). Then click submit
 
-$(@bind segment_folder confirm(PlutoUI.TextField(60; default = "SEGMENT_dcm")))
+$(@bind segment_folder confirm(TextField(60; default = "SEGMENT_dcm")))
 """
 
 # ╔═╡ 10b527a0-18d9-4d59-8556-fee3b2c90fe2
@@ -154,7 +184,7 @@ md"""
 
 Input the name of the folder containing the SureStart scans (default is `Limb_dcm`). Then click submit
 
-$(@bind limb_folder confirm(PlutoUI.TextField(60; default = "Limb_dcm")))
+$(@bind limb_folder confirm(TextField(60; default = "Limb_dcm")))
 """
 
 # ╔═╡ be43dea5-69a4-449c-9423-864c53e728c0
@@ -174,7 +204,7 @@ md"""
 
 Input the name of the folder containing the SureStart scans (default is `FA_dcm`). Then click submit
 
-$(@bind fa_folder confirm(PlutoUI.TextField(60; default = "FA_dcm")))
+$(@bind fa_folder confirm(TextField(60; default = "FA_dcm")))
 """
 
 # ╔═╡ 76557751-7e5b-4e12-ad1a-85689755ef75
@@ -200,19 +230,19 @@ begin
 end;
 
 # ╔═╡ 60ef5850-638a-4f89-b2be-63d151e2f690
-@bind z_vols PlutoUI.Slider(axes(v1_arr, 3), show_value = true, default = size(v1_arr, 3) ÷ 15)
+@bind z_vols Slider(axes(v1_arr, 3), show_value = true, default = size(v1_arr, 3) ÷ 15)
 
 # ╔═╡ 9a7b1a51-90a2-472d-8809-0bbdee4afa1f
 let
-    f = Figure(resolution = (2200, 1400))
-    ax = CairoMakie.Axis(
+    f = Figure(size = (800, 500))
+    ax = Axis(
         f[1, 1],
         title = "V1 (No Contrast)",
         titlesize = 40
     )
     heatmap!(v1_arr[:, :, z_vols], colormap = :grays)
 
-    ax = CairoMakie.Axis(
+    ax = Axis(
         f[1, 2],
         title = "V2 (Contrast)",
         titlesize = 40
@@ -238,22 +268,22 @@ begin
 end;
 
 # ╔═╡ d124f844-5079-4501-8eef-b54ce939e0a1
-@bind z_limb PlutoUI.Slider(axes(limb_mask, 3), show_value = true, default = size(limb_mask, 3) ÷ 2)
+@bind z_limb Slider(axes(limb_mask, 3), show_value = true, default = size(limb_mask, 3) ÷ 2)
 
 # ╔═╡ 13014114-37ba-4183-8660-2b5f7d3fa74f
 let
-    f = Figure(resolution = (2200, 1600))
+    f = Figure(size = (800, 500))
     ax = Axis(
         f[1, 1],
         title = "Limb Mask",
-		titlesize = 40
+		titlesize = 30
     )
     heatmap!(limb_mask[:, :, z_limb], colormap = :grays)
 
     ax = Axis(
         f[1, 2],
         title = "Limb Mask Overlayed",
-		titlesize = 40
+		titlesize = 30
     )
     heatmap!(v2_arr[:, :, z_limb], colormap = :grays)
     heatmap!(limb_mask[:, :, z_limb], colormap = (:jet, 0.3))
@@ -269,7 +299,7 @@ md"""
 ss_arr = load_dcm_array(dcms_ss);
 
 # ╔═╡ 25a72dd0-7435-4aa9-98b0-d8a6f5ea1eed
-@bind z_ss PlutoUI.Slider(axes(ss_arr, 3), show_value = true, default = size(ss_arr, 3))
+@bind z_ss Slider(axes(ss_arr, 3), show_value = true, default = size(ss_arr, 3))
 
 # ╔═╡ 36be9348-d572-4fa5-86e5-6e529f2d7092
 let
@@ -307,37 +337,37 @@ begin
 end
 
 # ╔═╡ 47a7aa2c-610e-4394-8ba0-cb902cb6ed42
-@bind z_fa PlutoUI.Slider(axes(fa_mask, 3), show_value = true, default = size(fa_mask, 3) ÷ 15)
+@bind z_fa Slider(axes(fa_mask, 3), show_value = true, default = size(fa_mask, 3) ÷ 15)
 
 # ╔═╡ 48246bdc-59e8-49aa-8785-03a064accbbd
 let
-    f = Figure(resolution = (2200, 2200))
-    ax = CairoMakie.Axis(
+    f = Figure(size = (800, 800))
+    ax = Axis(
         f[1, 1],
         title = "Femoral Artery Mask",
-        titlesize = 40
+        titlesize = 20
     )
     heatmap!(fa_mask[:, :, z_fa], colormap = :grays)
 
-    ax = CairoMakie.Axis(
+    ax = Axis(
         f[1, 2],
         title = "Femoral Artery Mask Eroded",
-        titlesize = 40
+        titlesize = 20
     )
     heatmap!(fa_mask_erode[:, :, z_fa], colormap = :grays)
 
-	ax = CairoMakie.Axis(
+	ax = Axis(
         f[2, 1],
         title = "Femoral Artery Mask Overlayed",
-        titlesize = 40
+        titlesize = 20
     )
     heatmap!(v2_arr[:, :, z_fa], colormap = :grays)
     heatmap!(fa_mask[:, :, z_fa], colormap = (:jet, 0.3))
 
-    ax = CairoMakie.Axis(
+    ax = Axis(
         f[2, 2],
         title = "Femoral Artery Mask Eroded",
-        titlesize = 40
+        titlesize = 20
     )
     heatmap!(v2_arr[:, :, z_fa], colormap = :grays)
     heatmap!(fa_mask_erode[:, :, z_fa], colormap = (:jet, 0.3))
@@ -369,22 +399,22 @@ md"""
 v2_reg = register(v1_crop, v2_crop; num_iterations = 10);
 
 # ╔═╡ f08a4ff7-cbbf-4681-a049-bfa451cf780a
-@bind z_reg PlutoUI.Slider(axes(v1_crop, 3), show_value = true, default = 182)
+@bind z_reg Slider(axes(v1_crop, 3), show_value = true, default = 182)
 
 # ╔═╡ 049e8a67-6237-43c0-9adc-c5dfe7e4d03f
 let
-    f = Figure(resolution = (2200, 1400))
-    ax = CairoMakie.Axis(
+    f = Figure(size = (800, 500))
+    ax = Axis(
         f[1, 1],
         title = "Unregistered",
-        titlesize = 40
+        titlesize = 20
     )
     heatmap!(v2_crop[:, :, z_reg] - v1_crop[:, :, z_reg])
 
-    ax = CairoMakie.Axis(
+    ax = Axis(
         f[1, 2],
         title = "Registered",
-        titlesize = 40
+        titlesize = 20
     )
 	heatmap!(v2_reg[:, :, z_reg] - v1_crop[:, :, z_reg])
     f
@@ -402,21 +432,21 @@ md"""
 
 # ╔═╡ 906f9427-4757-44d9-a957-2efd4b7f53f0
 md"""
-Select slice: $(@bind z1_aif PlutoUI.Slider(axes(ss_arr, 3), show_value = true, default = size(ss_arr, 3)))
+Select slice: $(@bind z1_aif Slider(axes(ss_arr, 3), show_value = true, default = size(ss_arr, 3)))
 
-Choose x location: $(@bind x1_aif PlutoUI.Slider(axes(ss_arr, 1), show_value = true, default = size(ss_arr, 1) ÷ 2))
+Choose x location: $(@bind x1_aif Slider(axes(ss_arr, 1), show_value = true, default = size(ss_arr, 1) ÷ 2))
 
-Choose y location: $(@bind y1_aif PlutoUI.Slider(axes(ss_arr, 1), show_value = true, default = size(ss_arr, 1) ÷ 2))
+Choose y location: $(@bind y1_aif Slider(axes(ss_arr, 1), show_value = true, default = size(ss_arr, 1) ÷ 2))
 
-Choose radius: $(@bind r1_aif PlutoUI.Slider(1:10, show_value = true))
+Choose radius: $(@bind r1_aif Slider(1:10, show_value = true))
 
-Check box when ready: $(@bind aif1_ready PlutoUI.CheckBox())
+Check box when ready: $(@bind aif1_ready CheckBox())
 """
 
 # ╔═╡ 5eb279b5-348f-4c00-bad2-c40f545739be
 let
 	f = Figure()
-	ax = CairoMakie.Axis(
+	ax = Axis(
 		f[1, 1],
 		title = "Sure Start AIF"
 	)
@@ -440,21 +470,21 @@ md"""
 
 # ╔═╡ 69bbc077-2523-47a1-8c48-b0dc5c8ef0c2
 md"""
-Select slice: $(@bind z2_aif PlutoUI.Slider(axes(v2_reg, 3), show_value = true))
+Select slice: $(@bind z2_aif Slider(axes(v2_reg, 3), show_value = true))
 
-Choose x location: $(@bind x2_aif PlutoUI.Slider(axes(v2_reg, 1), show_value = true, default = size(v2_reg, 1) ÷ 2))
+Choose x location: $(@bind x2_aif Slider(axes(v2_reg, 1), show_value = true, default = size(v2_reg, 1) ÷ 2))
 
-Choose y location: $(@bind y2_aif PlutoUI.Slider(axes(v2_reg, 1), show_value = true, default = size(v2_reg, 1) ÷ 2))
+Choose y location: $(@bind y2_aif Slider(axes(v2_reg, 1), show_value = true, default = size(v2_reg, 1) ÷ 2))
 
-Choose radius: $(@bind r2_aif PlutoUI.Slider(1:10, show_value = true))
+Choose radius: $(@bind r2_aif Slider(1:10, show_value = true))
 
-Check box when ready: $(@bind aif2_ready PlutoUI.CheckBox())
+Check box when ready: $(@bind aif2_ready CheckBox())
 """
 
 # ╔═╡ e9dad16b-07bc-4b87-be6b-959b078a5ba7
 let
 	f = Figure()
-	ax = CairoMakie.Axis(
+	ax = Axis(
 		f[1, 1],
 		title = "V2 AIF"
 	)
@@ -494,7 +524,7 @@ md"""
 """
 
 # ╔═╡ 442acfeb-981d-4ff1-9b3f-93709cdb428b
-@bind offset PlutoUI.Slider(0:0.5:10, show_value = true, default = 5)
+@bind offset Slider(0:0.5:10, show_value = true, default = 5)
 
 # ╔═╡ 61604f83-e5f3-4aed-ac0b-1c630d7a1d67
 if aif1_ready && aif2_ready
@@ -603,14 +633,14 @@ end
 
 # ╔═╡ a2aeaa04-3097-4dd0-8bab-5c98b74514b3
 if aif1_ready && aif2_ready
-	@bind z_flow PlutoUI.Slider(axes(flow_map, 3), show_value = true, default = size(flow_map, 3) ÷ 2)
+	@bind z_flow Slider(axes(flow_map, 3), show_value = true, default = size(flow_map, 3) ÷ 2)
 end
 
 # ╔═╡ 283c0ee5-0321-4f5d-9792-d593f49cafc1
 if aif1_ready && aif2_ready
 	let
 		f = Figure()
-		ax = CairoMakie.Axis(
+		ax = Axis(
 			f[1, 1],
 			title = "Flow Map"
 		)
@@ -662,10 +692,21 @@ if aif1_ready && aif2_ready
 end
 
 # ╔═╡ 4fc6b337-468a-445a-9180-4a89ff4ee24c
-df
+if @isdefined df
+	df
+end
 
 # ╔═╡ Cell order:
-# ╠═eeba971b-c64e-4195-95ca-5cf2ae5ac590
+# ╟─a18a15fe-e253-4743-96ce-6b63f24b6b3b
+# ╠═fac7bdb8-7413-465b-bceb-9d9bb73c9117
+# ╠═1e7e5a47-bcbe-4693-bf54-56f560ccc3cc
+# ╠═a33b073a-6e34-426e-b43a-d82350e6444f
+# ╠═ed34c08a-85db-471e-919a-0ae52eabbc0b
+# ╠═531b84e9-5d9c-4864-9bd1-d2ef3597f579
+# ╠═7d5a2b33-bd9f-4e8e-a13d-0fc0ef51eebf
+# ╠═f3244e67-9793-4d04-b49d-d8195c22f15f
+# ╠═6f7fb2d3-5931-496c-88d6-3a9e166480fe
+# ╠═318e2ea3-6995-426d-aa3b-14d4db8a9e7e
 # ╠═0129d839-fde4-46bf-a2e1-beb79fdd2cab
 # ╟─b4252854-a892-48d1-9c67-4b4ac3b74ded
 # ╟─6fa28ef7-8e95-43af-9ef1-9fb549590bf7
@@ -737,7 +778,7 @@ df
 # ╠═fc43feee-9d9a-4af6-a76a-7dfbb927c0ae
 # ╟─442acfeb-981d-4ff1-9b3f-93709cdb428b
 # ╟─c44b2487-bcd2-43f2-af89-2e3b0e1a54e8
-# ╠═4fc6b337-468a-445a-9180-4a89ff4ee24c
+# ╟─4fc6b337-468a-445a-9180-4a89ff4ee24c
 # ╟─5aecb6b9-a813-4cf8-8a7f-2da4a19a052e
 # ╟─d90057db-c68d-4b70-9247-1098bf129783
 # ╠═140c1343-2a6e-4d4f-a3db-0d608d7e885c
