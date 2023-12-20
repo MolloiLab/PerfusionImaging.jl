@@ -38,7 +38,7 @@ using DataFrames: DataFrame
 
 # ╔═╡ e78b9d34-94dd-494b-a8ef-1c4af86187b6
 # ╠═╡ show_logs = false
-using PerfusionImaging: load_dcm_array, find_bounding_box, crop_array, register, compute_aif, scan_time_vector, gamma_curve_fit, gamma, trapz, get_voxel_size
+using PerfusionImaging: load_dcm_array, find_bounding_box, crop_array, register, compute_aif, scan_time_vector, gamma_curve_fit, gamma, trapz, get_voxel_size, make_volume_uniform, calculate_flow
 
 # ╔═╡ 0aff8608-44d1-498c-9ba8-568fd8df9ac2
 md"""
@@ -681,31 +681,6 @@ if aif1_ready
 	tissue_rho = 1.053 # tissue density : g/cm^2
 end
 
-# ╔═╡ 0a728ed6-999d-4f12-b843-21fe5638c52c
-function make_volume_uniform(volume, mask, val_inside_mask = 47, val_outside_mask = 0)
-	volume_uniform = copy(volume)
-	volume_uniform[mask] .= 47  # Set all values inside the mask to 47
-	volume_uniform[.!mask] .= 0  # Set all values outside the mask to 0
-	return volume_uniform
-end
-
-# ╔═╡ ac4c92bf-1a0c-4125-9fec-48bf974c173c
-function calculate_flow(
-	v1, v2, mask, pixel_spacing, delta_time;
-	tissue_rho = 1.053)
-	
-	voxel_size = prod(pixel_spacing)
-	organ_mass = (sum(mask) * tissue_rho * voxel_size) / 1000 # g
-	organ_vol_inplane = pixel_spacing[1] * pixel_spacing[2] / 1000
-	delta_hu = mean(v2[mask]) - mean(v1[mask])
-
-	v1_mass = sum(v1[mask]) * organ_vol_inplane
-	v2_mass = sum(v2[mask]) * organ_vol_inplane
-
-	flow  = (1 / input_conc) * ((v2_mass - v1_mass) / (delta_time / 60)) # mL/min
-	return flow, organ_mass
-end
-
 # ╔═╡ 501f004d-6858-45fe-b74c-9536389e19ba
 if aif1_ready
 	v1_uniform = make_volume_uniform(v1_crop, full_crop, 47, 0)
@@ -714,7 +689,7 @@ if aif1_ready
 end
 
 # ╔═╡ 252b6f9f-00cd-44b3-93c5-1cd217ebc6ae
-begin
+if aif1_ready
 	flow_map = (v2_reg - v1_uniform) ./ (mean(v2_reg[full_crop]) - mean(v1_uniform[full_crop])) .* flow
 	perf_map = flow_map ./ organ_mass
 	perf_std = std(perf_map[full_crop])
@@ -888,8 +863,6 @@ end
 # ╟─793078f2-42a9-42c6-b943-0efecc5d2f09
 # ╟─9edfe954-be66-40bb-9cf6-70660e678fff
 # ╠═7d50db75-074c-4b15-b131-b09560899bb3
-# ╠═0a728ed6-999d-4f12-b843-21fe5638c52c
-# ╠═ac4c92bf-1a0c-4125-9fec-48bf974c173c
 # ╠═501f004d-6858-45fe-b74c-9536389e19ba
 # ╠═252b6f9f-00cd-44b3-93c5-1cd217ebc6ae
 # ╟─139e558a-722c-432f-bb87-15806f0aff0a

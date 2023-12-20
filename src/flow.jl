@@ -1,5 +1,7 @@
 export calculate_flow
 
+using Statistics: mean
+
 function calculate_flow(
 	v1, v2, mask, pixel_spacing, delta_time;
 	tissue_rho = 1.053)
