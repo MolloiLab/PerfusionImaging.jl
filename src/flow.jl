@@ -3,7 +3,7 @@ export calculate_flow
 using Statistics: mean
 
 function calculate_flow(
-	v1, v2, mask, pixel_spacing, delta_time;
+	v1, v2, mask, pixel_spacing, delta_time, input_conc;
 	tissue_rho = 1.053)
 	
 	voxel_size = prod(pixel_spacing)

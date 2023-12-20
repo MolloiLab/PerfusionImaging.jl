@@ -681,6 +681,9 @@ if aif1_ready
 	tissue_rho = 1.053 # tissue density : g/cm^2
 end
 
+# ╔═╡ 653a73b0-2102-4752-a2e0-0a2e761721b2
+input_conc
+
 # ╔═╡ 501f004d-6858-45fe-b74c-9536389e19ba
 if aif1_ready
 	v1_uniform = make_volume_uniform(v1_crop, full_crop, 47, 0)
@@ -863,6 +866,7 @@ end
 # ╟─793078f2-42a9-42c6-b943-0efecc5d2f09
 # ╟─9edfe954-be66-40bb-9cf6-70660e678fff
 # ╠═7d50db75-074c-4b15-b131-b09560899bb3
+# ╠═653a73b0-2102-4752-a2e0-0a2e761721b2
 # ╠═501f004d-6858-45fe-b74c-9536389e19ba
 # ╠═252b6f9f-00cd-44b3-93c5-1cd217ebc6ae
 # ╟─139e558a-722c-432f-bb87-15806f0aff0a

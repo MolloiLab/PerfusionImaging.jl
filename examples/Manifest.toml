@@ -1197,8 +1197,8 @@ uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 version = "2.8.0"
 
 [[deps.PerfusionImaging]]
-deps = ["CondaPkg", "DICOM", "LsqFit", "PythonCall"]
-git-tree-sha1 = "9134dc198a1e772248942d6cb46a7c1c2004776a"
+deps = ["CondaPkg", "DICOM", "LsqFit", "PythonCall", "Statistics"]
+git-tree-sha1 = "2803eef58f6518cf68c41e8e49a500f5f3931478"
 repo-rev = "main"
 repo-url = "https://github.com/Dale-Black/PerfusionImaging.jl"
 uuid = "187119c3-f0c9-4846-bd2a-6fdb8a2d7639"
