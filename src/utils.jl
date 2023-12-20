@@ -1,5 +1,7 @@
 using DICOM
 
+export load_dcm_array, scan_time_vector, dcm_time_2sec, trapz, get_voxel_size, make_volume_uniform
+
 load_dcm_array(dcm_data::Vector{DICOM.DICOMData}) = cat([dcm_data[i][tag"Pixel Data"] for i in eachindex(dcm_data)]...; dims=3)
 
 function scan_time_vector(dcms)
@@ -50,5 +52,9 @@ function get_voxel_size(header)
     return voxel_size
 end
 
-
-export load_dcm_array, scan_time_vector, dcm_time_2sec, trapz, get_voxel_size
+function make_volume_uniform(volume, mask, val_inside_mask = 47, val_outside_mask = 0)
+	volume_uniform = copy(volume)
+	volume_uniform[mask] .= 47  # Set all values inside the mask to 47
+	volume_uniform[.!mask] .= 0  # Set all values outside the mask to 0
+	return volume_uniform
+end

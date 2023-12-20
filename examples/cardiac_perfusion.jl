@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.35
+# v0.19.36
 
 using Markdown
 using InteractiveUtils
@@ -258,14 +258,14 @@ let
     ax = Axis(
         f[1, 1],
         title = "V1 (No Contrast)",
-        titlesize = 40
+        titlesize = 20
     )
     heatmap!(v1_arr[:, :, z_vols], colormap = :grays)
 
     ax = Axis(
         f[1, 2],
         title = "V2 (Contrast)",
-        titlesize = 40
+        titlesize = 20
     )
     heatmap!(v2_arr[:, :, z_vols], colormap = :grays)
     f
@@ -396,7 +396,7 @@ begin
 end
 
 # ╔═╡ a173eedd-1d7b-4f5e-8952-0ab9002ec00d
-@bind z_aorta Slider(axes(aorta_mask, 3), show_value = true, default = size(aorta_mask, 3) ÷ 15)
+@bind z_aorta Slider(axes(aorta_mask, 3), show_value = true, default = size(aorta_mask, 3) ÷ 2)
 
 # ╔═╡ 682beda6-0849-4848-9330-970379004b10
 let
@@ -462,7 +462,8 @@ md"""
 """
 
 # ╔═╡ a04745e3-386e-4d76-8b3e-e797fc5c038a
-v2_reg = register(v1_crop, v2_crop; num_iterations = 20);
+v2_reg = register(v1_crop, v2_crop; num_iterations = 1);
+# v2_reg = copy(v2_crop);
 
 # ╔═╡ 771fd41e-cb6f-4123-9077-e9b2b26e663f
 @bind z_reg Slider(axes(v1_crop, 3), show_value = true, default = 100)
@@ -485,6 +486,39 @@ let
 	heatmap!(v2_reg[:, :, z_reg] - v1_crop[:, :, z_reg])
     f
 end
+
+# ╔═╡ 06f2a525-4442-447a-a18a-c6bc9d73ea51
+@bind z_full Slider(axes(full_crop, 3), show_value = true, default = size(full_crop, 3) ÷ 2)
+
+# ╔═╡ 70af5388-b3c9-4abd-94eb-34390f582ed0
+let
+    f = Figure(size = (800, 500))
+    ax = Axis(
+        f[1, 1],
+        title = "V1 Registered Overlay",
+		titlesize = 20
+    )
+    heatmap!(v1_crop[:, :, z_full], colormap = :grays)
+    heatmap!(full_crop[:, :, z_full], colormap = (:jet, 0.3))
+
+    ax = Axis(
+        f[1, 2],
+        title = "V2 Registered Overlay",
+		titlesize = 20
+    )
+    heatmap!(v2_reg[:, :, z_full], colormap = :grays)
+    heatmap!(full_crop[:, :, z_full], colormap = (:jet, 0.3))
+    f
+end
+
+# ╔═╡ ecbcbaf4-d649-4c62-bc89-bca62c7afb43
+md"""
+!!! warning
+	The code below shows that there is a potential issue with the data. The LM mask, when overlayed on top of V1, has a mean intensity of ~ -110 HU. I verified this on ImageJ. Maybe this is a problem with beam hardening? Not sure. But this might be why the group decided to distribute a uniform V1 intensity of V1. We will follow that protocol here.
+"""
+
+# ╔═╡ 46fc2650-7766-420e-b56a-f38747b23af6
+mean(v1_crop[lm_crop])
 
 # ╔═╡ 49d15613-f77f-4e60-a199-6589d7332a06
 md"""
@@ -529,58 +563,12 @@ let
 	f
 end
 
-# ╔═╡ 3be29ce7-7cfe-4be1-b0ba-7a6c79c9c2c2
-function compute_aif2(dcm, x, y, r)
-	# Initialize an array to store the mean values for each slice
-	mean_values = Float64[]
-
-	# Loop through each slice
-	for z in axes(dcm, 3)
-		# Initialize a boolean mask with the same dimensions as the slice
-		mask = zeros(Bool, size(dcm, 1), size(dcm, 2))
-
-		# Populate the mask based on the circle's equation
-		for ix in axes(dcm, 1)
-			for iy in axes(dcm, 2)
-				if (ix - x)^2 + (iy - y)^2 <= r^2
-					mask[ix, iy] = true
-				end
-			end
-		end
-
-		# Extract the pixel values inside the circle
-		pixel_values = dcm[:, :, z] .* mask
-
-		# Compute the mean value for this slice inside the circle
-		mean_value = sum(pixel_values) / sum(mask)
-
-		# Store the computed mean value
-		push!(mean_values, mean_value)
-	end
-
-	return mean_values
-end
-
 # ╔═╡ a9e78216-a0ca-4290-b811-f65c6552869a
 if aif1_ready
-	# aif_vec_ss = compute_aif2(ss_arr, x1_aif, y1_aif, r1_aif)
-	aif_vec_ss = [
-		162.875000000000	128.540000000000	146.945000000000	143.215000000000	162.720000000000	147.145000000000	159.910000000000	138.160000000000	158.310000000000	155.705000000000	168.770000000000	170.835000000000	146.910000000000	134.285000000000	126.850000000000	141.745000000000	150.305000000000	111.820000000000	148.660000000000	154.115000000000	137.515000000000	167.530000000000	169.575000000000	150.110000000000	161.055000000000	162.340000000000	148.597989949749	186.660000000000	175.420000000000	212.700000000000
-	]
-	# aif_vec_v2 = compute_aif(v2_reg, x2_aif, y2_aif, r2_aif, z2_aif)
-	aif_vec_v2 = mean(v2_arr[aorta_mask])
-	# aif_vec_gamma = aif_vec_ss
-	aif_vec_gamma = [aif_vec_ss..., aif_vec_v2]
+	aif_surestart = compute_aif(ss_arr, x1_aif, y1_aif, r1_aif)
+	aif_v2 = mean(v2_arr[aorta_mask])
+	aif_vec_gamma = [aif_surestart..., aif_v2]
 end
-
-# ╔═╡ f959525a-3452-4989-9910-bdb23a1b1b1d
-# v2_arr[aorta_arr]
-
-# ╔═╡ 740887de-acc7-4c74-9d97-a9d574a2ce37
-
-
-# ╔═╡ 39a9b531-9d20-4f5c-b55c-20d11a3e1463
-aif_vec_ss
 
 # ╔═╡ 2725a5bd-495a-4c0e-85ec-1510f86f3bf6
 md"""
@@ -602,7 +590,6 @@ if aif1_ready
 
 	delta_time = time_vector_v2[length(time_vector_v2) ÷ 2] - time_vector_ss[end]
 
-	# time_vec_gamma = time_vector_ss_rel
 	time_vec_gamma = [time_vector_ss_rel..., delta_time + time_vector_ss_rel[end]]
 end
 
@@ -686,21 +673,51 @@ md"""
 ## Prepare Perfusion Details
 """
 
-# ╔═╡ 995cf14e-a6d1-4e90-8b41-cbb083f9ab41
+# ╔═╡ 7d50db75-074c-4b15-b131-b09560899bb3
 if aif1_ready
 	header = dcms_v1[1].meta
 	voxel_size = get_voxel_size(header)
 	heart_rate = round(1 / (mean(diff(time_vec_gamma)) / 60))
 	tissue_rho = 1.053 # tissue density : g/cm^2
-	organ_mass = (sum(full_crop) * tissue_rho * voxel_size[1] * voxel_size[2] * voxel_size[3]) / 1000 # g
-	delta_hu = mean(v2_reg[full_crop]) - mean(v1_crop[full_crop])
-	organ_vol_inplane =  voxel_size[1] * voxel_size[2] / 1000
-	v1_mass = sum(v1_crop[full_crop]) * organ_vol_inplane
-	v2_mass = sum(v2_reg[full_crop]) * organ_vol_inplane
+end
+
+# ╔═╡ 0a728ed6-999d-4f12-b843-21fe5638c52c
+function make_volume_uniform(volume, mask, val_inside_mask = 47, val_outside_mask = 0)
+	volume_uniform = copy(volume)
+	volume_uniform[mask] .= 47  # Set all values inside the mask to 47
+	volume_uniform[.!mask] .= 0  # Set all values outside the mask to 0
+	return volume_uniform
+end
+
+# ╔═╡ ac4c92bf-1a0c-4125-9fec-48bf974c173c
+function calculate_flow(
+	v1, v2, mask, pixel_spacing, delta_time;
+	tissue_rho = 1.053)
+	
+	voxel_size = prod(pixel_spacing)
+	organ_mass = (sum(mask) * tissue_rho * voxel_size) / 1000 # g
+	organ_vol_inplane = pixel_spacing[1] * pixel_spacing[2] / 1000
+	delta_hu = mean(v2[mask]) - mean(v1[mask])
+
+	v1_mass = sum(v1[mask]) * organ_vol_inplane
+	v2_mass = sum(v2[mask]) * organ_vol_inplane
+
 	flow  = (1 / input_conc) * ((v2_mass - v1_mass) / (delta_time / 60)) # mL/min
-	flow_map = (v2_reg - v1_crop) ./ (mean(v2_reg[full_crop]) - mean(v1_crop[full_crop])) .* flow; # mL/min/g, voxel-by-voxel blood perfusion of organ of interest
-	perf_map = flow_map ./ organ_mass;
-	perf = (flow / organ_mass, std(perf_map[full_crop]))
+	return flow, organ_mass
+end
+
+# ╔═╡ 501f004d-6858-45fe-b74c-9536389e19ba
+if aif1_ready
+	v1_uniform = make_volume_uniform(v1_crop, full_crop, 47, 0)
+	flow, organ_mass = calculate_flow(v1_uniform, v2_reg, full_crop, voxel_size, delta_time)
+	perf = flow / organ_mass
+end
+
+# ╔═╡ 252b6f9f-00cd-44b3-93c5-1cd217ebc6ae
+begin
+	flow_map = (v2_reg - v1_uniform) ./ (mean(v2_reg[full_crop]) - mean(v1_uniform[full_crop])) .* flow
+	perf_map = flow_map ./ organ_mass
+	perf_std = std(perf_map[full_crop])
 end
 
 # ╔═╡ 139e558a-722c-432f-bb87-15806f0aff0a
@@ -711,18 +728,28 @@ end
 # ╔═╡ b2183d00-876c-4861-8add-9987d6cdf51c
 if aif1_ready
 	let
-		f = Figure()
+		f = Figure(size = (700, 900))
 		ax = Axis(
 			f[1, 1],
 			title = "Flow Map"
 		)
 
-		masked_v2 = v2_reg .* full_crop
 		masked_flow_map = flow_map .* full_crop
-		heatmap!(masked_v2[:, :, z_flow], colormap = :grays)
-		hm2 = heatmap!(masked_flow_map[:, :, z_flow], colormap = (:jet, 0.6))
+		heatmap!(v2_reg[:, :, z_flow], colormap = :grays)
+		hm2 = heatmap!(masked_flow_map[:, :, z_flow], colormap = (:jet, 0.5))
 
 		Colorbar(f[1,2], hm2)
+
+		ax = Axis(
+			f[2, 1],
+			title = "Perfusion Map"
+		)
+
+		masked_perf_map = perf_map .* full_crop
+		heatmap!(v2_reg[:, :, z_flow], colormap = :grays)
+		hm2 = heatmap!(masked_perf_map[:, :, z_flow], colormap = (:jet, 0.5))
+
+		Colorbar(f[2,2], hm2)
 		# Colorbar(f[1, 2], limits = (-10, 300), colormap = :jet,
   #   flipaxis = false)
 		f
@@ -743,21 +770,19 @@ col_names = [
     "flow_std",
     "delta_time",
     "mass",
-    "delta_hu",
     "heart_rate"
 ]
 
 # ╔═╡ 053863f7-4607-4c16-b8e2-bfd0cf5b0535
 if aif1_ready
 	col_vals = [
-	    perf[1],
-	    perf[2],
+	    perf,
+	    perf_std,
 	    length(perf) == 3 ? perf[3] : missing,
-	    perf[1] * organ_mass,
-	    perf[2] * organ_mass,  
+	    perf * organ_mass,
+	    perf_std * organ_mass,  
 	    delta_time,
 	    organ_mass,
-	    delta_hu,
 	    heart_rate
 	]
 end
@@ -765,11 +790,6 @@ end
 # ╔═╡ 2e8dea82-636c-43d4-b2ef-0aba7e15191e
 if aif1_ready
 	df = DataFrame(parameters = col_names, values = col_vals)
-end
-
-# ╔═╡ 398eff57-5e0f-4c69-a67c-3e1286d9ab86
-if @isdefined df
-	df
 end
 
 # ╔═╡ Cell order:
@@ -849,15 +869,15 @@ end
 # ╠═a04745e3-386e-4d76-8b3e-e797fc5c038a
 # ╟─771fd41e-cb6f-4123-9077-e9b2b26e663f
 # ╟─b3bc44f6-4cda-42f8-99d0-0703b5f90942
+# ╟─06f2a525-4442-447a-a18a-c6bc9d73ea51
+# ╟─70af5388-b3c9-4abd-94eb-34390f582ed0
+# ╟─ecbcbaf4-d649-4c62-bc89-bca62c7afb43
+# ╠═46fc2650-7766-420e-b56a-f38747b23af6
 # ╟─49d15613-f77f-4e60-a199-6589d7332a06
 # ╟─42482099-1175-4ae6-bbf2-03d7cca3fb77
 # ╟─9c224143-3d99-4a89-a48c-12afc7cc6cea
 # ╟─da08cf24-82d4-46aa-b2ec-60762ddd4219
-# ╠═3be29ce7-7cfe-4be1-b0ba-7a6c79c9c2c2
 # ╠═a9e78216-a0ca-4290-b811-f65c6552869a
-# ╠═f959525a-3452-4989-9910-bdb23a1b1b1d
-# ╠═740887de-acc7-4c74-9d97-a9d574a2ce37
-# ╠═39a9b531-9d20-4f5c-b55c-20d11a3e1463
 # ╟─2725a5bd-495a-4c0e-85ec-1510f86f3bf6
 # ╟─2bb870d0-8dc5-4179-ac62-750c5b203375
 # ╠═4ea44e82-3f98-41c4-b494-7f2035c3f436
@@ -865,10 +885,13 @@ end
 # ╠═e5adb264-14b4-429f-a52f-a1ec4a268e53
 # ╠═b7cb52bb-6cd1-4275-a417-ca84ed241cba
 # ╟─15d5a917-a565-4157-a92f-907976520cfc
-# ╟─398eff57-5e0f-4c69-a67c-3e1286d9ab86
 # ╟─793078f2-42a9-42c6-b943-0efecc5d2f09
 # ╟─9edfe954-be66-40bb-9cf6-70660e678fff
-# ╠═995cf14e-a6d1-4e90-8b41-cbb083f9ab41
+# ╠═7d50db75-074c-4b15-b131-b09560899bb3
+# ╠═0a728ed6-999d-4f12-b843-21fe5638c52c
+# ╠═ac4c92bf-1a0c-4125-9fec-48bf974c173c
+# ╠═501f004d-6858-45fe-b74c-9536389e19ba
+# ╠═252b6f9f-00cd-44b3-93c5-1cd217ebc6ae
 # ╟─139e558a-722c-432f-bb87-15806f0aff0a
 # ╟─b2183d00-876c-4861-8add-9987d6cdf51c
 # ╟─771d0e87-2174-4704-a16b-cd8b8a688541
