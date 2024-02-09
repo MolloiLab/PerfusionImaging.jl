@@ -683,7 +683,7 @@ end
 
 # ╔═╡ 501f004d-6858-45fe-b74c-9536389e19ba
 if aif1_ready
-	v1_uniform = make_volume_uniform(v1_crop, full_crop, 47, 0)
+	v1_uniform = make_volume_uniform(v1_crop, full_crop, 0)
 	flow, organ_mass = calculate_flow(v1_uniform, v2_reg, full_crop, voxel_size, delta_time, input_conc)
 	perf = flow / organ_mass
 end

@@ -52,9 +52,9 @@ function get_voxel_size(header)
     return voxel_size
 end
 
-function make_volume_uniform(volume, mask, val_inside_mask = 47, val_outside_mask = 0)
+function make_volume_uniform(volume, mask, val_outside_mask = 0)
 	volume_uniform = copy(volume)
-	volume_uniform[mask] .= 47  # Set all values inside the mask to 47
-	volume_uniform[.!mask] .= 0  # Set all values outside the mask to 0
+	volume_uniform[mask] .= round.(mean(volume_uniform[mask]))  # Set all values inside the mask to 47
+	volume_uniform[.!mask] .= val_outside_mask  # Set all values outside the mask to 0
 	return volume_uniform
 end
