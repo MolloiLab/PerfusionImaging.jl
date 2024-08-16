@@ -1,8 +1,6 @@
 using DICOM
 
-export load_dcm_array, scan_time_vector, dcm_time_2sec, trapz, get_voxel_size, make_volume_uniform
-
-load_dcm_array(dcm_data::Vector{DICOM.DICOMData}) = cat([dcm_data[i][tag"Pixel Data"] for i in eachindex(dcm_data)]...; dims=3)
+export scan_time_vector, dcm_time_2sec, trapz, get_voxel_size, make_volume_uniform
 
 function scan_time_vector(dcms)
 	scan_times = Float64[]
