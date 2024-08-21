@@ -3,5 +3,5 @@ python = "=3.12"
 
 [pip.deps]
 torchreg = "@git+https://github.com/codingfisch/torchreg.git"
-numpy = ""
 torch = ""
+numpy = "<2.0"
